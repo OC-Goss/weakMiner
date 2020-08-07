@@ -1,30 +1,6 @@
 -- Miner V2
 -- Author: weakman54
--- License: see bottom
-
-
---------------------------------------------------------------------------
----- Instructions for use ------------------------------------------------
--- Miner home pos setup:
---    Charger adjacent to homePos
---    A Chest for dumping inventory between mining runs
---    Optionally a chest for keeping needed materials for the robot (maintenance chest)
---
--- Brief description of a run
--- For each branch:
---    do a pre-dig maintenance check
---      ensure good pick durability, otherwise craft a new pick
---      refuel
---    mine down the "trunk" to the branch start position
---    mine in  branchDir for scanChunkSize*branchDepth blocks
---      each scanChunkSize blocks, do a scan and mine out the detected ores
---    mine in -branchDir for scanChunkSize*branchDepth blocks, with it's position shifted by shiftDir*scanChunkSize blocks
---      each scanChunkSize blocks, do a scan and mine out the detected ores
---    
---  return to trunk
---  return to home
---  dump resources in dump chest
-
+-- License: MIT (see bottom)
 
 
 --------------------------------------------------------------------------
@@ -55,13 +31,6 @@ local pickaxeDurabilityTreshold = 1000 -- If durability is below this, the bot w
 local allowCombinePicks = true
 
 
-local doLogging = true
-local logFilePath ="log.txt")
-
-
-
-
-
 
 
 --------------------------------------------------------------------------
@@ -70,7 +39,6 @@ local robot = require("robot")
 local component = require("component")
 local computer = require("computer")
 local filesystem = require("filesystem")
---local os = require("os")
 
 local geo = component.geolyzer
 local gen = component.generator
@@ -80,7 +48,6 @@ local inv = component.inventory_controller
 local nibnav = require("nibnav")
 local nibinv = require("nibinv")
 
---local vec3 = require("vector3")
 local geoUtil = dofile("util_geolyzer.lua")
 local roboUtil = dofile("util_robot.lua")
 
@@ -207,30 +174,6 @@ end
 
 
 
-local function getWorldTimeInTicks()
-  return os.time() * (1000/60/60) - 6000
-end
-
---local logFilePath = "log.txt"
-local function log(str)
-  if not doLogging then return end
-  
-  local time = getWorldTimeInTicks()
-  
-  str = str.format("%d %s", time, str)
-  
-  
-  local logFile = filesystem.open(logFilePath, "a")
-	logFile:write(str.."\n")
-	logFile:close()
-  -- time, energy level, energy max, position
-  -- itemStacks in inventory
-  print("energy percent %02.2f")
-end
-
-
-
-
 
 -- Could be moved to robo utils probably?
 local function distanceFromRobot(pos)
@@ -240,7 +183,6 @@ end
 
 
 -- Tries to move to the target position
--- NOTE: will not stop blocking calls until target reached, could be better
 -- if allowDigging is true, it will use robot.swing on any block it can't go to before moving
 -- The order of x, y, z to move in can be rearranged by rearranging the if's below, though I want to fix this to be easier at some point
 local function moveToBlock(target, allowDigging)
@@ -296,6 +238,7 @@ end
 
 -- Scans the surrounding blocks for ores
 -- Returns a list of absolute coordinates that represent ores
+-- TODO: could be refactored to scan for any "type" of block (as described by a guess function)
 local function getOres()
   local ores = {}
 
@@ -322,6 +265,10 @@ local function getOres()
 end
 
 
+-- Digs all ores found by getOres
+-- If returnToStart is true (defaults to true if omitted), the bot will return to the positon it started at
+-- Uses a naive Nearest Neighbour algorithm
+-- TODO: factor out call to getOres and send in a list of positions instead
 local function digOres(returnToStart)
   if returnToStart == nil then returnToStart = true end
 
@@ -341,18 +288,12 @@ local function digOres(returnToStart)
 end
 
 
-local function digBranch(branchI)
-end
-
-
-
-
 
 
 -------------------------------------------------------------
 -- PROGRAM --------------------------------------------------
 -------------------------------------------------------------
-print("Miner program V2")
+print("Miner program V2.1")
 print("Reference version 1")
 
 computer.beep(880 , 0.1)
@@ -374,6 +315,7 @@ end
 
 local startTime = computer.uptime()
 local refTime
+
 
 -------------------------------------
 -- Main loop ------------------------
@@ -425,35 +367,10 @@ end
 
 
 
-
-
-
---[[Test/Debugging code, should be commented out for the most part
-local d = getOres()
-
-print("asdf", #d)
-
-for i, v in ipairs(d) do
-  print(v)
-end
-
-digOres()
---]]
-
-
--- TODO: add in waypoint positioning in order to not run away into eternity if user forgets to config nibnav position before starting miner
--- TODO: check fuel and inventory levels
--- TODO: self refuel
--- TODO: Keep track of where we have mined already
--- TODO: add torches to reduce monster spawns?
--- TODO: mining quota?
--- TODO: add in config for type of fuel
-
-
 --[[
 MIT License
 
-Copyright (c) 2020 weakman54 (enkiigm@gmail.com)
+Copyright (c) 2020 weakman54
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
